@@ -1,0 +1,10 @@
+{
+    "name": "example_plugin",
+    "version": "1_1_0",
+    "author": "插件开发者",
+    "description": "示例插件演示基本功能",
+    "entry_point": "Plugin",
+    "min_system_version": "1_1_0",
+    "required_services": ["thread", "signal"],
+    "permissions": ["data_access", "network_communication"]
+}

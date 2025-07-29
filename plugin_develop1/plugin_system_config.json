@@ -1,0 +1,32 @@
+{
+  "system": {
+    "backup_dir": "backups",
+    "max_backups": 3,
+    "default_threads": 1,
+    "host": "127.0.0.1",
+    "api_whitelist": {
+      "basic": [
+        "get_status",
+        "log"
+      ],
+      "advanced": [
+        "db_query",
+        "file_upload"
+      ]
+    }
+  },
+  "plugins": {
+    "hello_plugin": {
+      "version": "1.0.0",
+      "allowed_apis": [
+        "db_query"
+      ],
+      "enabled": true
+    },
+    "HelloPlugin": {
+      "version": "1.0.0",
+      "allowed_apis": [],
+      "enabled": true
+    }
+  }
+}

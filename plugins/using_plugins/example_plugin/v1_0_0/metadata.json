@@ -1,0 +1,13 @@
+{
+    "name": "example_plugin",
+    "author": "your_name",
+    "version": "v1_0_0",
+    "description": "A sample plugin",
+    "entry_point": "ExamplePlugin",
+    "min_system_version": "v1_0_0",
+    "required_services": [
+        "thread",
+        "signal"
+    ],
+    "permissions": []
+}

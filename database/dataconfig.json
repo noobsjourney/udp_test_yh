@@ -1,0 +1,20 @@
+{
+    "sqlite_read1": {
+        "db_type": "sqlite",
+        "database": "shared_database.db",
+        "readonly": true
+    },
+    "sqlite_write1": {
+        "db_type": "sqlite",
+        "database": "shared_database.db"
+    },
+    "sqlite_read2": {
+        "db_type": "sqlite",
+        "database": "data_database.db",
+        "readonly": true
+    },
+    "sqlite_write2": {
+        "db_type": "sqlite",
+        "database": "data_database.db"
+    }
+}
