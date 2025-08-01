@@ -285,7 +285,7 @@ class ThreadExecutor(BaseModule):
 
     def get_active_pools(self) -> Dict[str, str]:
         """获取当前活跃线程池信息"""
-        print("获取当前活跃线程池信息")
+        #  print("获取当前活跃线程池信息")
         return {name: typ for name, (typ, _) in self._pools.items()}
 
     def get_running_tasks(self) -> Dict[str, str]:

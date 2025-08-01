@@ -490,6 +490,7 @@ class UDPTransmitter(QObject):
     transmission_failed = pyqtSignal(str, int, str, tuple)      # modename, node_id, error, source_addr
     ack_received = pyqtSignal(str, int, int, tuple)             # modename, node_id, sequence_num, source_addr
     port_status_changed = pyqtSignal(tuple, bool)  
+    port_check_packet_received = pyqtSignal(tuple, bool)
     def __init__(self, bind_host: str = '0.0.0.0', bind_port: int = 0):
         """初始化UDP网络管理器
 
@@ -586,6 +587,7 @@ class UDPTransmitter(QObject):
         try:
             self.sock.sendto(ack.build(), addr)
             logger.info(f"Sent port check ACK to {addr}")
+            self.port_check_packet_received.emit(addr, True)
         except Exception as e:
             logger.error(f"Failed to send port check ACK to {addr}: {str(e)}")
     
@@ -1038,12 +1040,14 @@ class UDPNetworkManager(QObject):
     dataReceived = pyqtSignal(str, int, bytes, tuple)  # modename, node_id, data, source_addr
     transmissionFailed = pyqtSignal(str, int, str, tuple)  # modename, node_id, error, dest_addr
     portStatusChanged = pyqtSignal(tuple, bool) 
+    portCheckReceived = pyqtSignal(tuple, bool)  
     def __init__(self, bind_host: str = '0.0.0.0', bind_port: int = 0):
         super().__init__()
         self.transmitter = UDPTransmitter(bind_host, bind_port)
         self.transmitter.transmission_complete.connect(self._on_data_received)
         self.transmitter.transmission_failed.connect(self._on_transmission_failed)
         self.transmitter.port_status_changed.connect(self._on_port_status_changed)
+        self.transmitter.port_check_packet_received.connect(self._on_port_check_received)
         self.pool = QThreadPool.globalInstance()
 
     def check_port(self, dest_addr: Tuple[str, int], modename: str = "node", node_id: int = 0):
@@ -1083,6 +1087,15 @@ class UDPNetworkManager(QObject):
             online: 端口是否在线
         """
         self.portStatusChanged.emit(addr, online)
+        
+    def _on_port_check_received(self, addr: Tuple[str, int], online: bool):
+        """接收到端口检查包 - 信号槽回调
+
+        Args:
+            addr: 目标地址元组 (host, port)
+            node_id: 节点ID
+        """
+        self.portCheckReceived.emit(addr, online)
     
     def send_to(self, modename: str, node_id: int, data: bytes, dest_addr: Tuple[str, int]):
         """发送数据到指定地址
