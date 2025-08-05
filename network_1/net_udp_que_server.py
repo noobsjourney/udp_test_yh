@@ -7,6 +7,7 @@ from typing import Tuple, Dict, Callable
 import queue
 from network_1.udp import UDPNetworkManager
 from base_module import BaseModule
+from node_info import NodeInfo
 
 class NetUDPQue(BaseModule):
     """
@@ -80,6 +81,7 @@ class NetUDPQue(BaseModule):
             self.signal_manager.register_regular_signal(self.module_name,"netsend",str,dict,int) 
             self.signal_manager.connect_regular_signal(self.module_name,"netsend",self._queue_send_data)
             self.signal_manager.register_regular_signal("node","received",dict,int)
+            self.signal_manager.register_regular_signal("node","statusChanged",int,bool)  
         # 创建网络管理器
         self.net_mgr = UDPNetworkManager(bind_addr[0], bind_addr[1])
         self.net_mgr.dataReceived.connect(self._handle_received_data)
@@ -90,7 +92,9 @@ class NetUDPQue(BaseModule):
         # 节点ID-地址映射表 {node_id: (ip, port)}
         self.node_id_to_addr = {}  
         # 节点地址-最后活跃时间映射 { (ip, port): timestamp }
-        self.source_port_last_active = {}  
+        self.source_port_last_active = {} 
+        # 节点信息管理字典 
+        self.node_info_dict = {}
         # 发送队列
         self.send_queue = queue.Queue()
         self.thread_que = self.coreServiceBus.get_service("thread") if self.coreServiceBus else None
@@ -185,10 +189,25 @@ class NetUDPQue(BaseModule):
                 current_time = time.time()
                 offline_addrs = []
                 # 遍历所有客户端地址，检查最后活跃时间
-                for addr, last_active in self.source_port_last_active.items():
-                    if current_time - last_active > OFFLINE_THRESHOLD:
-                        offline_addrs.append(addr)
-                        self.port_status[addr] = False  # 标记为离线
+                with self.dict_lock:
+                    for addr, last_active in self.source_port_last_active.items():
+                        if current_time - last_active > OFFLINE_THRESHOLD:
+                            offline_addrs.append(addr)
+                            self.port_status[addr] = False  # 标记为离线
+                            
+                            # 查找对应node_id并更新状态
+                            node_id = None
+                            for nid, naddr in self.node_id_to_addr.items():
+                                if naddr == addr:
+                                    node_id = nid
+                                    break
+                            
+                            if node_id and node_id in self.node_info_dict:
+                                current_status = self.node_info_dict[node_id].nodeIsOnline
+                                if current_status:
+                                    self.node_info_dict[node_id].set_offline()
+                                    if self.signal_manager:
+                                        self.signal_manager.emit_regular_signal("node","statusChanged", node_id, False)
                 # 输出离线日志
                 if offline_addrs:
                     print(f"检测到离线客户端地址: {offline_addrs}")
@@ -226,6 +245,30 @@ class NetUDPQue(BaseModule):
         """确认接收到端口检测包 端口状态设置为在线"""
         # 记录状态与活跃时间
         with self.dict_lock:
+            # 获取对应的node_id
+            node_id = None
+            for nid, naddr in self.node_id_to_addr.items():
+                if naddr == addr:
+                    node_id = nid
+                    break
+                
+            # 初始化 / 更新节点信息
+            if node_id is not None:
+                if node_id not in self.node_info_dict:
+                    self.node_info_dict[node_id] = NodeInfo()
+                    self.node_info_dict[node_id].set_node_info(node_id, f"Node_{node_id}")
+                    
+                # 检查状态是否变化
+                current_status = self.node_info_dict[node_id].nodeIsOnline
+                if online and not current_status:
+                    self.node_info_dict[node_id].set_online()
+                    if self.signal_manager:
+                        self.signal_manager.emit_regular_signal("node","statusChanged", node_id, True)
+                # elif not online and current_status:
+                #     self.node_info_dict[node_id].set_offline()
+                #     if self.signal_manager:
+                #         self.signal_manager.emit_regular_signal("node","statusChanged", node_id, False)
+                    
             self.port_status[addr] = online
             self.source_port_last_active[addr] = time.time()
         # print(f"[{datetime.datetime.now()}] 端口状态更新: {addr} {'在线' if online else '离线'}")
@@ -302,10 +345,10 @@ if __name__ == "__main__":
     def handle_received_data(data_dict,node_id):
         print(f"服务器接收到节点ID[{node_id}]的数据: {data_dict}")
         print(data_dict)
-        # 服务器返回数据给客户端
-        server._emit_netsend("node", server_response_dict,node_id)
-        server.close()  # 释放客户端资源（线程/队列/网络连接）
-        app.quit()      # 退出应用
+        # # 服务器返回数据给客户端
+        # server._emit_netsend("node", server_response_dict,node_id)
+        # server.close()  # 释放客户端资源（线程/队列/网络连接）
+        # app.quit()      # 退出应用
 
 
     app = QCoreApplication(sys.argv)
