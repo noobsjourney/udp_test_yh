@@ -119,6 +119,7 @@ class NetUDPQue(BaseModule):
                 'data': data_bytes,
                 'dest_addr': self.dest_addr
             })
+            print(f"数据已加入发送队列: {mode_name}, 目标: {self.dest_addr}, 数据大小: {len(data_bytes)} bytes")
         except Exception as e:
             print(f"字典转换为字节流失败: {e}")
  
@@ -226,6 +227,7 @@ class NetUDPQue(BaseModule):
         # 将目标端口的在线状态通过信号传输出去
         if self.signal_manager:
             self.signal_manager.emit_regular_signal(self.module_name,"portStatusChanged",online)
+        client._emit_netsend("node", nodeInfo_dict)
         
     def _emit_netsend(self, mode_name: str, data: dict):
         """触发发送信号 执行槽函数将数据加入发送队列"""
@@ -311,7 +313,7 @@ if __name__ == "__main__":
 
     
     # 发送数据(可以传输 字典/.jpg/.py/.zip)
-    client._emit_netsend("node", nodeInfo_dict)
+    # client._emit_netsend("node", nodeInfo_dict)
     # client.send_file("test.jpg")
     # client.send_file("test.py")
     # client.send_file("test.zip")

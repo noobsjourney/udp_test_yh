@@ -122,6 +122,8 @@ class UDPPacket:
             bool: 校验通过返回True，否则返回False
         """
         """验证校验和"""
+        # print(self.checksum)
+        # print(self.calculate_checksum())
         return self.checksum == self.calculate_checksum()
     
     @classmethod
@@ -198,6 +200,7 @@ class UDPPacket:
                 packet = ACKPacket(modename, node_id)
                 packet.sequence_num = unpacked[6]  # 序列号位置
                 packet.packet_num = unpacked[5]    # 分包号
+                packet.ack_status = unpacked[1]    # 确认状态
                 packet.checksum = checksum
                 print("ACK包解析",unpacked[5],unpacked[6],unpacked[4])
                 if not packet.verify_checksum():
@@ -397,8 +400,6 @@ class ACKPacket(UDPPacket):
         self.sequence_num = 0
         self.packet_num = 0
   
-        
-    
     def build(self) -> bytes:
         model_id = self.model_id
         if model_id == -1:
@@ -442,8 +443,7 @@ class CheckPortPacket(UDPPacket):
     HEADER_FORMAT = UDPPacket.HEADER_FORMAT + "II"  # 增加包序列号(4B), 包号
     HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
     def __init__(self,modename: str, node_id: int):
-
-        super().__init__(self.CHECK_PORT_PACKET, self.ACK_NORMAL, modename, node_id)
+        super().__init__(self.CHECK_PORT_PACKET, self.ACK_CHECKPORT, modename, node_id)
         self.sequence_num = 0
         self.packet_num = 0
     def build(self) -> bytes:
